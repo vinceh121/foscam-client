@@ -35,6 +35,8 @@ import org.w3c.dom.Element;
 
 import uk.co.caprica.vlcj.component.EmbeddedMediaPlayerComponent;
 import java.awt.Toolkit;
+import javax.swing.SwingConstants;
+import javax.swing.JCheckBoxMenuItem;
 
 public class App extends JFrame {
 	/**
@@ -56,7 +58,8 @@ public class App extends JFrame {
 	private JToggleButton tglbtnFlip;
 
 	private App() {
-		setIconImage(Toolkit.getDefaultToolkit().getImage(App.class.getResource("/com/famfamfam/icons/silk/webcam.png")));
+		setIconImage(
+				Toolkit.getDefaultToolkit().getImage(App.class.getResource("/com/famfamfam/icons/silk/webcam.png")));
 		setTitle("Foscam");
 		setSize(560, 400);
 		setLocationRelativeTo(null);
@@ -99,6 +102,18 @@ public class App extends JFrame {
 			}
 		});
 		mnFile.add(mntmConnect);
+
+		JMenuItem mntmExit = new JMenuItem("Exit");
+		mntmExit.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				System.exit(0);
+			}
+		});
+
+		JCheckBoxMenuItem chckbxmntmEnableAlarm = new JCheckBoxMenuItem("Enable alarm");
+		chckbxmntmEnableAlarm.setSelected(true);
+		mnFile.add(chckbxmntmEnableAlarm);
+		mnFile.add(mntmExit);
 
 		JMenu mnHelp = new JMenu("Help");
 		menuBar.add(mnHelp);
@@ -393,12 +408,12 @@ public class App extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				try {
 					CGIManager.getInstance().execCmd("flipVideo", new NameValuePair() {
-						
+
 						@Override
 						public String getValue() {
-							return tglbtnFlip.isSelected()? "1" : "0";
+							return tglbtnFlip.isSelected() ? "1" : "0";
 						}
-						
+
 						@Override
 						public String getName() {
 							return "isFlip";
@@ -413,6 +428,73 @@ public class App extends JFrame {
 		tglbtnFlip.setIcon(new ImageIcon(App.class.getResource("/com/famfamfam/icons/silk/shape_flip_vertical.png")));
 		toolBar.add(tglbtnFlip);
 
+		JToolBar toolBarZoom = new JToolBar();
+		toolBarZoom.setOrientation(SwingConstants.VERTICAL);
+		viewPanel.add(toolBarZoom, BorderLayout.WEST);
+
+		JButton btnZoomin = new JButton("");
+		btnZoomin.setToolTipText("Zoom In");
+		btnZoomin.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				try {
+					CGIManager.getInstance().execCmd("zoomIn");
+				} catch (IOException | URISyntaxException | CGIException e) {
+					e.printStackTrace();
+					JOptionPane.showMessageDialog(null, "Could not zoom in, does your device have a zoom lens?");
+				}
+			}
+		});
+		btnZoomin.setIcon(new ImageIcon(App.class.getResource("/com/famfamfam/icons/silk/zoom_in.png")));
+		toolBarZoom.add(btnZoomin);
+
+		JButton btnStopzoom = new JButton("");
+		btnStopzoom.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					CGIManager.getInstance().execCmd("zoomStop");
+				} catch (IOException | URISyntaxException | CGIException e1) {
+					e1.printStackTrace();
+					JOptionPane.showMessageDialog(null, "Could not stop the zoom, does your device have a zoom lens?");
+				}
+			}
+		});
+		btnStopzoom.setToolTipText("Stop Zoom");
+		btnStopzoom.setIcon(new ImageIcon(App.class.getResource("/com/famfamfam/icons/silk/stop.png")));
+		toolBarZoom.add(btnStopzoom);
+
+		JButton btnZoomout = new JButton("");
+		btnZoomout.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				try {
+					CGIManager.getInstance().execCmd("zoomOut");
+				} catch (IOException | URISyntaxException | CGIException e1) {
+					e1.printStackTrace();
+					JOptionPane.showMessageDialog(null, "Could not zoom out, does your device have a zoom lens?");
+				}
+			}
+		});
+		btnZoomout.setToolTipText("Zoom Out");
+		btnZoomout.setIcon(new ImageIcon(App.class.getResource("/com/famfamfam/icons/silk/zoom_out.png")));
+		toolBarZoom.add(btnZoomout);
+
+	}
+
+	class AlarmThread extends Thread {
+		@Override
+		public void run() {
+
+			for (;;) {
+				try {
+					sleep(5000);
+					Element e = CGIManager.getInstance().execCmd("getDevState");
+					if (e.getElementsByTagName("motionDetectAlarm").item(0).getTextContent().equals("2")) {
+						JOptionPane.showMessageDialog(null, "Alarm detected");
+					}
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
+			}
+		}
 	}
 
 	private void updateStats() throws ClientProtocolException, IOException, URISyntaxException, CGIException {
