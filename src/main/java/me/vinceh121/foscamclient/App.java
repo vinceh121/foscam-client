@@ -4,6 +4,7 @@ import java.awt.BorderLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -16,6 +17,7 @@ import java.util.TimeZone;
 
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
+import javax.swing.JCheckBoxMenuItem;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JMenu;
@@ -26,17 +28,14 @@ import javax.swing.JPanel;
 import javax.swing.JTabbedPane;
 import javax.swing.JToggleButton;
 import javax.swing.JToolBar;
+import javax.swing.SwingConstants;
 import javax.swing.UIManager;
-import javax.swing.plaf.synth.SynthLookAndFeel;
 
 import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
 import org.w3c.dom.Element;
 
 import uk.co.caprica.vlcj.component.EmbeddedMediaPlayerComponent;
-import java.awt.Toolkit;
-import javax.swing.SwingConstants;
-import javax.swing.JCheckBoxMenuItem;
 
 public class App extends JFrame {
 	/**
@@ -147,6 +146,13 @@ public class App extends JFrame {
 		menuBar.add(mnHelp);
 
 		JMenuItem mntmAbout = new JMenuItem("About");
+		mntmAbout.addActionListener(new ActionListener() {
+			
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				new AboutDialog().setVisible(true);
+			}
+		});
 		mnHelp.add(mntmAbout);
 
 		JTabbedPane tabbedPane = new JTabbedPane(JTabbedPane.LEFT);
