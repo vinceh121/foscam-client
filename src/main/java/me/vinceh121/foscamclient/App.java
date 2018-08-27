@@ -50,12 +50,16 @@ public class App extends JFrame {
 	private JLabel fieldFirmware;
 	private JLabel fieldHardwareVersion;
 	private JLabel fieldDeviceName;
-	private EmbeddedMediaPlayerComponent player;
+	private static EmbeddedMediaPlayerComponent player;
 	private JToggleButton tglbtnInfrared;
 	private JToggleButton tglbtnAutoinfrared;
 	private JToggleButton tglbtnRecord;
 	private JToggleButton tglbtnMirror;
 	private JToggleButton tglbtnFlip;
+	private JCheckBoxMenuItem chckbxmntmEnableAlarm;
+	private AlarmThread alarmThread = new AlarmThread();
+	private MotionAlarmFrame motionFrame;
+	private JMenuItem mntmScheduleMotion;
 
 	private App() {
 		setIconImage(
@@ -97,8 +101,12 @@ public class App extends JFrame {
 					}
 				} catch (IOException | URISyntaxException | CGIException e1) {
 					e1.printStackTrace();
+					JOptionPane.showMessageDialog(null, e1.getLocalizedMessage());
+					return;
 				}
 				player.getMediaPlayer().playMedia(CGIManager.getInstance().getRtspMrl());
+				mntmScheduleMotion.setEnabled(true);
+				chckbxmntmEnableAlarm.setEnabled(true);
 			}
 		});
 		mnFile.add(mntmConnect);
@@ -110,9 +118,29 @@ public class App extends JFrame {
 			}
 		});
 
-		JCheckBoxMenuItem chckbxmntmEnableAlarm = new JCheckBoxMenuItem("Enable alarm");
-		chckbxmntmEnableAlarm.setSelected(true);
+		chckbxmntmEnableAlarm = new JCheckBoxMenuItem("Enable alarm");
+		chckbxmntmEnableAlarm.setEnabled(false);
+		chckbxmntmEnableAlarm.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				if (chckbxmntmEnableAlarm.isSelected()) {
+					alarmThread.start();
+				} else {
+					alarmThread.interrupt();
+				}
+			}
+		});
+		chckbxmntmEnableAlarm.setSelected(false);
 		mnFile.add(chckbxmntmEnableAlarm);
+
+		mntmScheduleMotion = new JMenuItem("Schedule & Motion config.");
+		mntmScheduleMotion.setEnabled(false);
+		mntmScheduleMotion.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent arg0) {
+				motionFrame = new MotionAlarmFrame();
+				motionFrame.setVisible(true);
+			}
+		});
+		mnFile.add(mntmScheduleMotion);
 		mnFile.add(mntmExit);
 
 		JMenu mnHelp = new JMenu("Help");
@@ -479,6 +507,10 @@ public class App extends JFrame {
 
 	}
 
+	public static EmbeddedMediaPlayerComponent getMediaPlayerComp() {
+		return player;
+	}
+
 	class AlarmThread extends Thread {
 		@Override
 		public void run() {
@@ -490,8 +522,12 @@ public class App extends JFrame {
 					if (e.getElementsByTagName("motionDetectAlarm").item(0).getTextContent().equals("2")) {
 						JOptionPane.showMessageDialog(null, "Alarm detected");
 					}
+				} catch (InterruptedException intE) {
+					System.out.println("Alarm thread stopped!");
 				} catch (Exception e) {
 					e.printStackTrace();
+					JOptionPane.showMessageDialog(null,
+							"An error occured on the alarm thread: " + e.getLocalizedMessage());
 				}
 			}
 		}
