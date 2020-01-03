@@ -14,7 +14,7 @@ public class CGIException extends Exception {
 
 	public static String getMessageForCode(int code) {
 		String s = null;
-		switch (code) { // Those code have been copied directly from the documentation (yes, including the English mistakes)
+		switch (code) { // Those codes have been copied directly from the documentation (yes, including the English mistakes)
 		case 0:
 			s = "Success";
 			break;

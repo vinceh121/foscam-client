@@ -1,10 +1,15 @@
 package me.vinceh121.foscamclient;
 
+import java.awt.AWTException;
 import java.awt.BorderLayout;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.awt.MenuItem;
+import java.awt.PopupMenu;
+import java.awt.SystemTray;
 import java.awt.Toolkit;
+import java.awt.TrayIcon;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -31,17 +36,18 @@ import javax.swing.JToolBar;
 import javax.swing.SwingConstants;
 import javax.swing.UIManager;
 
-import org.apache.http.NameValuePair;
 import org.apache.http.client.ClientProtocolException;
+import org.apache.http.message.BasicNameValuePair;
 import org.w3c.dom.Element;
 
-import uk.co.caprica.vlcj.component.EmbeddedMediaPlayerComponent;
+import uk.co.caprica.vlcj.player.component.EmbeddedMediaPlayerComponent;
 
 public class App extends JFrame {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+	private static App app;
 	private JLabel fieldProductName;
 	private JLabel fieldSerialN;
 	private JLabel fieldMac;
@@ -49,7 +55,7 @@ public class App extends JFrame {
 	private JLabel fieldFirmware;
 	private JLabel fieldHardwareVersion;
 	private JLabel fieldDeviceName;
-	private static EmbeddedMediaPlayerComponent player;
+	private EmbeddedMediaPlayerComponent player;
 	private JToggleButton tglbtnInfrared;
 	private JToggleButton tglbtnAutoinfrared;
 	private JToggleButton tglbtnRecord;
@@ -59,6 +65,17 @@ public class App extends JFrame {
 	private AlarmThread alarmThread = new AlarmThread();
 	private MotionAlarmFrame motionFrame;
 	private JMenuItem mntmScheduleMotion;
+	private TrayIcon tray;
+
+	public static void main(String[] args) {
+		try {
+			UIManager.setLookAndFeel("com.formdev.flatlaf.FlatDarkLaf");
+		} catch (Throwable e) {
+			e.printStackTrace();
+		}
+		app = new App();
+		app.setVisible(true);
+	}
 
 	private App() {
 		setIconImage(
@@ -66,6 +83,9 @@ public class App extends JFrame {
 		setTitle("Foscam");
 		setSize(560, 400);
 		setLocationRelativeTo(null);
+		setDefaultCloseOperation(HIDE_ON_CLOSE);
+
+		setupTrayIcon();
 
 		CGIManager.getInstance().init();
 
@@ -103,7 +123,7 @@ public class App extends JFrame {
 					JOptionPane.showMessageDialog(null, e1.getLocalizedMessage());
 					return;
 				}
-				player.getMediaPlayer().playMedia(CGIManager.getInstance().getRtspMrl());
+				player.mediaPlayer().media().play(CGIManager.getInstance().getRtspMrl());
 				mntmScheduleMotion.setEnabled(true);
 				chckbxmntmEnableAlarm.setEnabled(true);
 			}
@@ -147,7 +167,7 @@ public class App extends JFrame {
 
 		JMenuItem mntmAbout = new JMenuItem("About");
 		mntmAbout.addActionListener(new ActionListener() {
-			
+
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				new AboutDialog().setVisible(true);
@@ -293,25 +313,21 @@ public class App extends JFrame {
 		viewPanel.setLayout(new BorderLayout(0, 0));
 
 		player = new EmbeddedMediaPlayerComponent();
-		player.getVideoSurface().addKeyListener(new KeyListener() {
+		player.videoSurfaceComponent().addKeyListener(new KeyListener() {
 
 			@Override
 			public void keyTyped(KeyEvent e) {
 				if (e.getKeyChar() == 's') {
-					player.getMediaPlayer().saveSnapshot();
+					player.mediaPlayer().snapshots().save();
 				}
 			}
 
 			@Override
 			public void keyReleased(KeyEvent e) {
-				// TODO Auto-generated method stub
-
 			}
 
 			@Override
 			public void keyPressed(KeyEvent e) {
-				// TODO Auto-generated method stub
-
 			}
 		});
 		viewPanel.add(player);
@@ -346,33 +362,10 @@ public class App extends JFrame {
 		tglbtnAutoinfrared.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				try {
-					if (tglbtnAutoinfrared.isSelected()) {
-						CGIManager.getInstance().execCmd("setInfraLedConfig", new NameValuePair() {
 
-							@Override
-							public String getValue() {
-								return "0";
-							}
+					CGIManager.getInstance().execCmd("setInfraLedConfig",
+							new BasicNameValuePair("mode", tglbtnAutoinfrared.isSelected() ? "1" : "0"));
 
-							@Override
-							public String getName() {
-								return "mode";
-							}
-						});
-					} else {
-						CGIManager.getInstance().execCmd("setInfraLedConfig", new NameValuePair() {
-
-							@Override
-							public String getValue() {
-								return "1";
-							}
-
-							@Override
-							public String getName() {
-								return "mode";
-							}
-						});
-					}
 				} catch (Exception exc) {
 					exc.printStackTrace();
 				}
@@ -383,7 +376,7 @@ public class App extends JFrame {
 		JButton btnSnap = new JButton("Snap");
 		btnSnap.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (!player.getMediaPlayer().saveSnapshot()) {
+				if (!player.mediaPlayer().snapshots().save()) {
 					JOptionPane.showMessageDialog(null, "Could not save snapshot");
 				}
 			}
@@ -395,15 +388,15 @@ public class App extends JFrame {
 		tglbtnRecord.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				if (tglbtnRecord.isSelected()) {
-					boolean b = player.getMediaPlayer().playMedia(CGIManager.getInstance().getRtspMrl(),
+					boolean b = player.mediaPlayer().media().play(CGIManager.getInstance().getRtspMrl(),
 							":sout=#transcode{vcodec=mp4v,vb=4096,scale=1,acodec=mpga,ab=128,channels=2,samplerate=44100}:duplicate{dst=file{dst="
 									+ JOptionPane.showInputDialog("File name (*.mp4)") + "},dst=display}");
 					if (!b) {
 						JOptionPane.showConfirmDialog(null, "Error starting the recording.");
 					}
 				} else {
-					player.getMediaPlayer().stop();
-					player.getMediaPlayer().playMedia(CGIManager.getInstance().getRtspMrl());
+					player.mediaPlayer().controls().stop();
+					player.mediaPlayer().media().play(CGIManager.getInstance().getRtspMrl());
 				}
 			}
 		});
@@ -414,18 +407,8 @@ public class App extends JFrame {
 		tglbtnMirror.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent arg0) {
 				try {
-					CGIManager.getInstance().execCmd("mirrorVideo", new NameValuePair() {
-
-						@Override
-						public String getValue() {
-							return tglbtnMirror.isSelected() ? "1" : "0";
-						}
-
-						@Override
-						public String getName() {
-							return "isMirror";
-						}
-					});
+					CGIManager.getInstance().execCmd("mirrorVideo",
+							new BasicNameValuePair("isMirror", tglbtnMirror.isSelected() ? "1" : "0"));
 				} catch (IOException | URISyntaxException | CGIException e) {
 					e.printStackTrace();
 					JOptionPane.showMessageDialog(null, "Failed to mirror video.");
@@ -441,18 +424,8 @@ public class App extends JFrame {
 		tglbtnFlip.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				try {
-					CGIManager.getInstance().execCmd("flipVideo", new NameValuePair() {
-
-						@Override
-						public String getValue() {
-							return tglbtnFlip.isSelected() ? "1" : "0";
-						}
-
-						@Override
-						public String getName() {
-							return "isFlip";
-						}
-					});
+					CGIManager.getInstance().execCmd("flipVideo",
+							new BasicNameValuePair("isFlip", tglbtnFlip.isSelected() ? "1" : "0"));
 				} catch (IOException | URISyntaxException | CGIException exc) {
 					exc.printStackTrace();
 					JOptionPane.showMessageDialog(null, "Failed to mirror video.");
@@ -513,29 +486,38 @@ public class App extends JFrame {
 
 	}
 
-	public static EmbeddedMediaPlayerComponent getMediaPlayerComp() {
+	public EmbeddedMediaPlayerComponent getMediaPlayerComp() {
 		return player;
 	}
 
-	class AlarmThread extends Thread {
-		@Override
-		public void run() {
+	private void setupTrayIcon() {
+		if (!SystemTray.isSupported()) {
+			System.err.println("System tray is not supported");
+			return;
+		}
 
-			for (;;) {
-				try {
-					sleep(5000);
-					Element e = CGIManager.getInstance().execCmd("getDevState");
-					if (e.getElementsByTagName("motionDetectAlarm").item(0).getTextContent().equals("2")) {
-						JOptionPane.showMessageDialog(null, "Alarm detected");
-					}
-				} catch (InterruptedException intE) {
-					System.out.println("Alarm thread stopped!");
-				} catch (Exception e) {
-					e.printStackTrace();
-					JOptionPane.showMessageDialog(null,
-							"An error occured on the alarm thread: " + e.getLocalizedMessage());
-				}
-			}
+		final SystemTray sysTray = SystemTray.getSystemTray();
+
+		final PopupMenu popup = new PopupMenu("Foscam");
+		
+		final MenuItem mntShowWin = new MenuItem("Show window");
+		mntShowWin.addActionListener((e) -> {
+			setVisible(true);
+		});
+		popup.add(mntShowWin);
+
+		final MenuItem mntExit = new MenuItem("Exit");
+		mntExit.addActionListener((e) -> {
+			System.exit(0);
+		});
+		popup.add(mntExit);
+
+		tray = new TrayIcon(new ImageIcon(App.class.getResource("/com/famfamfam/icons/silk/webcam.png")).getImage(),
+				"Foscam client", popup);
+		try {
+			sysTray.add(tray);
+		} catch (AWTException e1) {
+			e1.printStackTrace();
 		}
 	}
 
@@ -564,14 +546,30 @@ public class App extends JFrame {
 		fieldDeviceTime.setText(c.getTime().toString());
 	}
 
-	public static void main(String[] args) {
-		try {
-			UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
-		} catch (Throwable e) {
-			e.printStackTrace();
+	public static App getInstance() {
+		return app;
+	}
+
+	class AlarmThread extends Thread {
+		@Override
+		public void run() {
+
+			for (;;) {
+				try {
+					sleep(5000);
+					Element e = CGIManager.getInstance().execCmd("getDevState");
+					if (e.getElementsByTagName("motionDetectAlarm").item(0).getTextContent().equals("2")) {
+						JOptionPane.showMessageDialog(null, "Alarm detected");
+					}
+				} catch (InterruptedException intE) {
+					System.out.println("Alarm thread stopped!");
+				} catch (Exception e) {
+					e.printStackTrace();
+					JOptionPane.showMessageDialog(null,
+							"An error occured on the alarm thread: " + e.getLocalizedMessage());
+				}
+			}
 		}
-		App app = new App();
-		app.setVisible(true);
 	}
 
 }

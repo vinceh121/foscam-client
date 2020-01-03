@@ -126,6 +126,7 @@ public class ConnectionPopup extends JDialog {
 				setParameters();
 			}
 		});
+		getRootPane().setDefaultButton(btnConnect);
 		GridBagConstraints gbc_btnConnect = new GridBagConstraints();
 		gbc_btnConnect.insets = new Insets(0, 0, 0, 5);
 		gbc_btnConnect.gridx = 0;

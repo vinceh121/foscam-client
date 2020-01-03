@@ -58,5 +58,6 @@ public class AboutDialog extends JDialog {
 		gbc_txtrLicenses.gridx = 1;
 		gbc_txtrLicenses.gridy = 2;
 		getContentPane().add(txtrLicenses, gbc_txtrLicenses);
+		pack();
 	}
 }

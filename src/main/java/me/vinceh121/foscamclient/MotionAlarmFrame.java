@@ -55,7 +55,7 @@ public class MotionAlarmFrame extends JFrame {
 		tableMotion.setRows(10);
 		tableMotion.setCollumns(10);
 		tableMotion.setSquareSize(20);
-		tableMotion.setImage(App.getMediaPlayerComp().getMediaPlayer().getSnapshot());
+		tableMotion.setImage(App.getInstance().getMediaPlayerComp().mediaPlayer().snapshots().get());
 		tabbedPane.addTab("Motion Alarm Configuration", null, tableMotion, null);
 
 	}
